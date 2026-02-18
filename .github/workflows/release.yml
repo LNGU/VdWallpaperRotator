@@ -1,0 +1,51 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Extract version from tag
+        id: version
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart('v')
+          echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Update installer version
+        shell: pwsh
+        run: |
+          $content = Get-Content installer.iss -Raw
+          $content = $content -replace 'AppVersion=.*', "AppVersion=${{ steps.version.outputs.VERSION }}"
+          $content = $content -replace 'OutputBaseFilename=.*', "OutputBaseFilename=VdWallpaperRotator-Setup-${{ steps.version.outputs.VERSION }}"
+          Set-Content installer.iss $content
+
+      - name: Publish
+        run: dotnet publish src/TrayApp/TrayApp.csproj -c Release -r win-x64 --self-contained -o publish
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          choco install innosetup -y --no-progress
+          echo "C:\Program Files (x86)\Inno Setup 6" >> $env:GITHUB_PATH
+
+      - name: Build installer
+        run: iscc installer.iss
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: installer/VdWallpaperRotator-Setup-${{ steps.version.outputs.VERSION }}.exe
+          generate_release_notes: true
