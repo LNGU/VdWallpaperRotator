@@ -1,3 +1,6 @@
+# What's New
+v.1.1.0 - left-click enables 'rotate now'
+
 # Vd Wallpaper Rotator
 
 WinForms tray app that rotates **per-virtual-desktop** wallpapers on **Windows 11 (22H2+ / build 22621+)**.
