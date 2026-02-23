@@ -1,5 +1,5 @@
 # What's New
-v1.2.0 - Fix rotation not working on fresh install; prompts for wallpaper folder on first run
+v1.3.0 - Added global wallpaper mode for compatibility with systems where per-virtual-desktop doesn't work
 
 # Vd Wallpaper Rotator
 
@@ -38,17 +38,32 @@ Output: `installer\VdWallpaperRotator-Setup-x.x.x.exe`
   - set the wallpaper folder (subfolders are scanned)
   - set the rotation interval (seconds)
   - enable/disable launch at startup
+  - toggle compatibility mode (see below)
 - Left-click the tray icon to rotate immediately.
+
+### Compatibility Mode
+If wallpaper rotation doesn't work on your system (logs show success but wallpaper doesn't change), enable **"Use global wallpaper (compatibility)"** in the tray menu.
+
+| Mode | Description |
+|------|-------------|
+| **Per-Virtual-Desktop** (default) | Different wallpaper on each virtual desktop. Uses undocumented Windows API. |
+| **Global** (compatibility) | Same wallpaper across all virtual desktops. Uses official Windows API. More reliable on newer Windows builds. |
+
+**When to use compatibility mode:**
+- Wallpaper doesn't change despite successful log entries
+- You have multiple physical monitors and per-VD mode doesn't work
+- You're on a very recent Windows 11 build (26100+) where the undocumented API may have changed
 
 ## Config files
 Stored under:
 - `%AppData%\VdWallpaperRotator\config.json`
 - `%AppData%\VdWallpaperRotator\state.json`
+- `%AppData%\VdWallpaperRotator\app.log` (for troubleshooting)
 
 ## Startup
-The “Launch at startup” toggle uses:
+The "Launch at startup" toggle uses:
 - `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` (value: `VdWallpaperRotator`)
 
 ## Notes
 - Per-desktop wallpaper is implemented via **undocumented Windows COM interfaces** (dependency-free, but can break after Windows updates).
-
+- If per-VD mode stops working after a Windows update, use compatibility mode as a fallback.
