@@ -1,4 +1,5 @@
 [Setup]
+AppId={{B8F4E2A1-7D3C-4E5F-9A2B-1C6D8E0F3A5B}
 AppName=Vd Wallpaper Rotator
 AppVersion=1.2.0
 AppPublisher=
@@ -11,6 +12,9 @@ OutputDir=installer
 OutputBaseFilename=VdWallpaperRotator-Setup-1.2.0
 PrivilegesRequired=lowest
 ArchitecturesInstallIn64BitMode=x64compatible
+CloseApplications=yes
+CloseApplicationsFilter=TrayApp.exe
+RestartApplications=yes
 
 [Files]
 Source: "publish\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs
@@ -25,3 +29,13 @@ Name: "startup"; Description: "Start automatically when Windows starts"; GroupDe
 
 [Run]
 Filename: "{app}\TrayApp.exe"; Description: "Launch Vd Wallpaper Rotator"; Flags: nowait postinstall skipifsilent
+
+[Code]
+function InitializeSetup(): Boolean;
+var
+  ResultCode: Integer;
+begin
+  // Kill running instance before upgrade
+  Exec('taskkill.exe', '/F /IM TrayApp.exe', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Result := True;
+end;
