@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.0] - 2026-02-23
+
+### Changed
+- **New clearer rotation modes**: Replaced confusing "Use global wallpaper (compatibility)" with two distinct options:
+  - **Mode: Physical monitors** - Different wallpaper per monitor, same across all virtual desktops (uses official Windows API)
+  - **Mode: Virtual desktops** - Different wallpaper per virtual desktop, same on all monitors within each VD (uses undocumented API)
+- Removed confusing hybrid approach that caused erratic behavior (same wallpaper then different, or vice versa)
+- Default mode is now Physical Monitors (more reliable)
+
+### Note
+You can only use one mode at a time - Windows doesn't support per-monitor AND per-virtual-desktop wallpapers simultaneously.
+
 ## [1.3.3] - 2026-02-23
 
 ### Added

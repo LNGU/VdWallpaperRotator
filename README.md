@@ -1,9 +1,9 @@
 # What's New
-v1.3.3 - Global mode now rotates ALL monitors AND virtual desktops with unique wallpapers
+v1.4.0 - Clearer rotation modes: Physical Monitors vs Virtual Desktops (no more confusing hybrid)
 
 # Vd Wallpaper Rotator
 
-WinForms tray app that rotates **per-virtual-desktop** wallpapers on **Windows 11 (22H2+ / build 22621+)**.
+WinForms tray app that rotates wallpapers on **Windows 11 (22H2+ / build 22621+)**.
 
 ## Install
 
@@ -38,21 +38,21 @@ Output: `installer\VdWallpaperRotator-Setup-x.x.x.exe`
   - set the wallpaper folder (subfolders are scanned)
   - set the rotation interval (seconds)
   - enable/disable launch at startup
-  - toggle compatibility mode (see below)
+  - select rotation mode (see below)
 - Left-click the tray icon to rotate immediately.
 
-### Compatibility Mode
-If wallpaper rotation doesn't work on your system (logs show success but wallpaper doesn't change), enable **"Use global wallpaper (compatibility)"** in the tray menu.
+### Rotation Modes
 
-| Mode | Description |
-|------|-------------|
-| **Per-Virtual-Desktop** (default) | Different wallpaper on each virtual desktop. Uses undocumented Windows API. |
-| **Global** (compatibility) | Different wallpaper per physical monitor AND per virtual desktop. Uses hybrid approach with official API for reliable visual updates. |
+| Mode | Description | Best For |
+|------|-------------|----------|
+| **Physical Monitors** (default) | Different wallpaper on each monitor. Same wallpaper stays when switching virtual desktops. Uses official Windows API (reliable). | Multi-monitor setups |
+| **Virtual Desktops** | Different wallpaper on each virtual desktop. Same wallpaper on all monitors within each VD. Uses undocumented API (may break on some Windows builds). | Single monitor with multiple VDs |
 
-**When to use compatibility mode:**
-- Wallpaper doesn't change despite successful log entries
-- You have multiple physical monitors and per-VD mode doesn't work
-- You're on a very recent Windows 11 build (26100+) where the undocumented API may have changed
+Select your mode from the tray menu:
+- ✓ Mode: Physical monitors
+- ✓ Mode: Virtual desktops
+
+**Note:** You can only use one mode at a time. Windows doesn't support per-monitor AND per-virtual-desktop wallpapers simultaneously.
 
 ## Config files
 Stored under:
@@ -65,5 +65,5 @@ The "Launch at startup" toggle uses:
 - `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` (value: `VdWallpaperRotator`)
 
 ## Notes
-- Per-desktop wallpaper is implemented via **undocumented Windows COM interfaces** (dependency-free, but can break after Windows updates).
-- If per-VD mode stops working after a Windows update, use compatibility mode as a fallback.
+- Virtual Desktops mode uses **undocumented Windows COM interfaces** (dependency-free, but can break after Windows updates).
+- If Virtual Desktops mode stops working after a Windows update, switch to Physical Monitors mode.

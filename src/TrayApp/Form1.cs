@@ -103,12 +103,30 @@ public partial class Form1 : Form
         var setFolder = new ToolStripMenuItem("Set wallpaper folder...", null, (_, _) => SetWallpaperFolder());
         var setInterval = new ToolStripMenuItem("Set interval (seconds)...", null, (_, _) => SetIntervalSeconds());
 
-        var useGlobalMode = new ToolStripMenuItem("Use global wallpaper (compatibility)") { CheckOnClick = true };
-        useGlobalMode.Checked = _config.WallpaperMode == WallpaperMode.Global;
-        useGlobalMode.Click += (_, _) =>
+        // Mode selection - radio button style (only one can be checked)
+        var modePhysical = new ToolStripMenuItem("Mode: Physical monitors");
+        var modeVirtual = new ToolStripMenuItem("Mode: Virtual desktops");
+        
+        void UpdateModeChecks()
         {
-            _config.WallpaperMode = useGlobalMode.Checked ? WallpaperMode.Global : WallpaperMode.PerVirtualDesktop;
+            modePhysical.Checked = _config.WallpaperMode == WallpaperMode.PhysicalMonitors;
+            modeVirtual.Checked = _config.WallpaperMode == WallpaperMode.VirtualDesktops;
+        }
+        UpdateModeChecks();
+        
+        modePhysical.Click += (_, _) =>
+        {
+            _config.WallpaperMode = WallpaperMode.PhysicalMonitors;
             JsonStore.Save(AppPaths.ConfigPath, _config);
+            UpdateModeChecks();
+            Logger.Info($"Wallpaper mode changed to: {_config.WallpaperMode}");
+        };
+        
+        modeVirtual.Click += (_, _) =>
+        {
+            _config.WallpaperMode = WallpaperMode.VirtualDesktops;
+            JsonStore.Save(AppPaths.ConfigPath, _config);
+            UpdateModeChecks();
             Logger.Info($"Wallpaper mode changed to: {_config.WallpaperMode}");
         };
 
@@ -127,7 +145,9 @@ public partial class Form1 : Form
             new ToolStripSeparator(),
             setFolder,
             setInterval,
-            useGlobalMode,
+            new ToolStripSeparator(),
+            modePhysical,
+            modeVirtual,
             new ToolStripSeparator(),
             _startupItem,
             openLog,
@@ -208,92 +228,39 @@ public partial class Form1 : Form
                 return;
             }
 
-            // Global mode: different wallpaper per physical monitor AND per virtual desktop
-            if (_config.WallpaperMode == WallpaperMode.Global)
+            if (_config.WallpaperMode == WallpaperMode.PhysicalMonitors)
             {
+                // Physical Monitors mode: Different wallpaper per monitor using official API
+                // Same wallpaper visible across all virtual desktops
                 var monitorCount = VirtualDesktopService.GetMonitorCount();
+                Logger.Info($"Physical Monitors mode: {monitorCount} monitor(s), rotation={_config.Mode}");
+
+                var wallpapers = _engine.NextUniqueWallpapers(monitorCount);
                 
-                // Get virtual desktops (if available)
-                var desktopCount = 1;
-                var currentDesktop = 0;
-                IReadOnlyList<VirtualDesktopInfo>? desktops = null;
+                for (int i = 0; i < wallpapers.Count; i++)
+                {
+                    Logger.Info($"  Monitor {i}: {wallpapers[i]}");
+                }
+
+                VirtualDesktopService.SetWallpaperGlobal(wallpapers);
                 
-                if (_vd != null)
-                {
-                    try
-                    {
-                        desktops = _vd.GetDesktops();
-                        desktopCount = desktops.Count;
-                        currentDesktop = _vd.GetCurrentDesktopIndex();
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.Info($"Could not get virtual desktops: {ex.Message}");
-                    }
-                }
-
-                var totalSlots = monitorCount * desktopCount;
-                Logger.Info($"Global mode: {monitorCount} monitor(s), {desktopCount} VD(s) = {totalSlots} total slots, rotation={_config.Mode}");
-
-                // Get unique wallpapers for all slots
-                var allWallpapers = _engine.NextUniqueWallpapers(totalSlots);
-                
-                // Set wallpapers for each virtual desktop using undocumented API
-                if (desktops != null && _vd != null)
-                {
-                    for (int vdIndex = 0; vdIndex < desktopCount; vdIndex++)
-                    {
-                        // Get wallpapers for this VD's monitors
-                        var vdWallpapers = new List<string>();
-                        for (int m = 0; m < monitorCount; m++)
-                        {
-                            var slotIndex = vdIndex * monitorCount + m;
-                            vdWallpapers.Add(allWallpapers[slotIndex]);
-                        }
-
-                        // Use undocumented API to set per-VD wallpaper (uses first monitor's wallpaper)
-                        // This sets the VD's "default" wallpaper
-                        try
-                        {
-                            _vd.SetWallpaper(vdIndex, vdWallpapers[0]);
-                            Logger.Info($"  VD {vdIndex}: Set via undocumented API: {vdWallpapers[0]}");
-                        }
-                        catch (Exception ex)
-                        {
-                            Logger.Info($"  VD {vdIndex}: Undocumented API failed: {ex.Message}");
-                        }
-                    }
-                }
-
-                // Use official API to set wallpapers for current VD (forces visual refresh)
-                var currentVdWallpapers = new List<string>();
-                for (int m = 0; m < monitorCount; m++)
-                {
-                    var slotIndex = currentDesktop * monitorCount + m;
-                    currentVdWallpapers.Add(allWallpapers[slotIndex]);
-                    Logger.Info($"  Current VD, Monitor {m}: {allWallpapers[slotIndex]}");
-                }
-
-                if (currentVdWallpapers.Count > 0)
-                {
-                    VirtualDesktopService.SetWallpaperGlobal(currentVdWallpapers);
-                    Logger.Info("Current VD wallpapers set via official API (visual refresh)");
-                }
-
                 JsonStore.Save(AppPaths.StatePath, _state);
-                Logger.Info("RotateOnce completed successfully (global mode)");
+                Logger.Info("RotateOnce completed (Physical Monitors mode)");
                 return;
             }
 
-            // Per-virtual-desktop mode (undocumented API only, may not work on all builds)
+            // Virtual Desktops mode: Different wallpaper per virtual desktop using undocumented API
+            // Same wallpaper on all monitors within each VD
             if (_vd == null)
             {
-                Logger.Info("RotateOnce skipped: VirtualDesktopService not available");
+                Logger.Info("RotateOnce skipped: VirtualDesktopService not available for Virtual Desktops mode");
+                _tray?.ShowBalloonTip(3000, "Virtual Desktop API unavailable", 
+                    "Switch to Physical Monitors mode or check if your Windows version is supported.", ToolTipIcon.Warning);
                 return;
             }
 
             var vds = _vd.GetDesktops();
-            Logger.Info($"Found {vds.Count} virtual desktops");
+            Logger.Info($"Virtual Desktops mode: {vds.Count} virtual desktop(s), rotation={_config.Mode}");
 
             foreach (var d in vds)
             {
@@ -304,13 +271,11 @@ public partial class Form1 : Form
                     continue;
                 }
 
-                Logger.Info($"Setting wallpaper for desktop {d.Index} (id={d.Id}): {next}");
-                Logger.Info($"  Current wallpaper before: {d.WallpaperPath}");
+                Logger.Info($"  VD {d.Index}: {next}");
                 
                 try
                 {
                     _vd.SetWallpaper(d.Index, next);
-                    Logger.Info($"  SetWallpaper call succeeded");
                 }
                 catch (Exception ex)
                 {
@@ -320,7 +285,7 @@ public partial class Form1 : Form
             }
 
             JsonStore.Save(AppPaths.StatePath, _state);
-            Logger.Info("RotateOnce completed successfully");
+            Logger.Info("RotateOnce completed (Virtual Desktops mode)");
         }
         catch (Exception ex)
         {

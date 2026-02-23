@@ -1,7 +1,7 @@
 [Setup]
 AppId={{B8F4E2A1-7D3C-4E5F-9A2B-1C6D8E0F3A5B}
 AppName=Vd Wallpaper Rotator
-AppVersion=1.2.0
+AppVersion=1.4.0
 AppPublisher=
 DefaultDirName={autopf}\VdWallpaperRotator
 DefaultGroupName=Vd Wallpaper Rotator
@@ -9,7 +9,7 @@ UninstallDisplayIcon={app}\TrayApp.exe
 Compression=lzma2
 SolidCompression=yes
 OutputDir=installer
-OutputBaseFilename=VdWallpaperRotator-Setup-1.2.0
+OutputBaseFilename=VdWallpaperRotator-Setup-1.4.0
 PrivilegesRequired=lowest
 ArchitecturesInstallIn64BitMode=x64compatible
 CloseApplications=yes

@@ -10,10 +10,10 @@ public enum RotationMode
 
 public enum WallpaperMode
 {
+    /// <summary>Different wallpaper per physical monitor (official API, reliable)</summary>
+    PhysicalMonitors = 0,
     /// <summary>Different wallpaper per virtual desktop (undocumented API, may not work on all Windows builds)</summary>
-    PerVirtualDesktop = 0,
-    /// <summary>Same wallpaper across all virtual desktops (official API, more reliable)</summary>
-    Global = 1,
+    VirtualDesktops = 1,
 }
 
 public sealed class AppConfig
@@ -26,7 +26,7 @@ public sealed class AppConfig
     public RotationMode Mode { get; set; } = RotationMode.Sequential;
 
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    public WallpaperMode WallpaperMode { get; set; } = WallpaperMode.PerVirtualDesktop;
+    public WallpaperMode WallpaperMode { get; set; } = WallpaperMode.PhysicalMonitors;
 
     public string[] Extensions { get; set; } = [".jpg", ".jpeg", ".png", ".webp", ".bmp"];
 }
