@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.0] - 2026-02-23
+
+### Added
+- **Global wallpaper mode**: New "Use global wallpaper (compatibility)" option in tray menu for systems where per-virtual-desktop wallpaper doesn't work
+- Better diagnostic logging with Windows build info and per-step status
+
+### Fixed
+- Removed verification check that could cause silent failures on some Windows builds
+- Improved error handling in SetWallpaper
+
 ## [1.2.0] - 2026-02-23
 
 ### Fixed

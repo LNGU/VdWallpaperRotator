@@ -9,18 +9,19 @@ public sealed class VirtualDesktopService
     private readonly IServiceProvider10 _shell;
     private readonly IVirtualDesktopManagerInternal22621? _internal22621;
     private readonly IVirtualDesktopManagerInternal26100? _internal26100;
+    public int WindowsBuild { get; }
 
     public VirtualDesktopService()
     {
-        var build = Environment.OSVersion.Version.Build;
-        if (build < 22621)
-            throw new PlatformNotSupportedException($"Per-virtual-desktop wallpaper requires Windows 11 22H2+ (build 22621+). Detected build {build}.");
+        WindowsBuild = Environment.OSVersion.Version.Build;
+        if (WindowsBuild < 22621)
+            throw new PlatformNotSupportedException($"Per-virtual-desktop wallpaper requires Windows 11 22H2+ (build 22621+). Detected build {WindowsBuild}.");
 
         _shell = (IServiceProvider10)Activator.CreateInstance(Type.GetTypeFromCLSID(Guids.CLSID_ImmersiveShell)!)!;
 
         // Windows 11 24H2+ (build 26100+) inserts an extra method into this interface.
         // Build 26200 also uses the 26100 layout.
-        if (build >= 26100)
+        if (WindowsBuild >= 26100)
             _internal26100 = (IVirtualDesktopManagerInternal26100)_shell.QueryService(Guids.CLSID_VirtualDesktopManagerInternal, typeof(IVirtualDesktopManagerInternal26100).GUID);
         else
             _internal22621 = (IVirtualDesktopManagerInternal22621)_shell.QueryService(Guids.CLSID_VirtualDesktopManagerInternal, typeof(IVirtualDesktopManagerInternal22621).GUID);
@@ -77,6 +78,9 @@ public sealed class VirtualDesktopService
         if (string.IsNullOrWhiteSpace(path))
             throw new ArgumentNullException(nameof(path));
 
+        if (!File.Exists(path))
+            throw new FileNotFoundException($"Wallpaper file not found: {path}", path);
+
         GetDesktops(out var array);
         try
         {
@@ -87,7 +91,10 @@ public sealed class VirtualDesktopService
             try
             {
                 var hs = HString.FromString(path);
-                try { SetDesktopWallpaper(vd, hs); }
+                try 
+                { 
+                    SetDesktopWallpaper(vd, hs);
+                }
                 finally { hs.Delete(); }
             }
             finally
@@ -100,12 +107,42 @@ public sealed class VirtualDesktopService
             Marshal.ReleaseComObject(array);
         }
     }
+
+    /// <summary>
+    /// Sets wallpaper for the current desktop using the official IDesktopWallpaper API.
+    /// This affects all monitors on the current virtual desktop.
+    /// </summary>
+    public static void SetWallpaperGlobal(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            throw new ArgumentNullException(nameof(path));
+
+        if (!File.Exists(path))
+            throw new FileNotFoundException($"Wallpaper file not found: {path}", path);
+
+        var wallpaper = (IDesktopWallpaper)Activator.CreateInstance(Type.GetTypeFromCLSID(Guids.CLSID_DesktopWallpaper)!)!;
+        try
+        {
+            // Set wallpaper on all monitors
+            wallpaper.GetMonitorDevicePathCount(out var count);
+            for (uint i = 0; i < count; i++)
+            {
+                wallpaper.GetMonitorDevicePathAt(i, out var monitorId);
+                wallpaper.SetWallpaper(monitorId, path);
+            }
+        }
+        finally
+        {
+            Marshal.ReleaseComObject(wallpaper);
+        }
+    }
 }
 
 internal static class Guids
 {
     public static readonly Guid CLSID_ImmersiveShell = new("C2F03A33-21F5-47FA-B4BB-156362A2F239");
     public static readonly Guid CLSID_VirtualDesktopManagerInternal = new("C5E0CDCA-7B6E-41B2-9FC4-D93975CC467B");
+    public static readonly Guid CLSID_DesktopWallpaper = new("C2CF3110-460E-4FC1-B9D0-8A1C0C9CC4BD");
 }
 
 [StructLayout(LayoutKind.Sequential)]
@@ -264,4 +301,36 @@ internal interface IVirtualDesktopManagerInternal26100
     void SwitchDesktopWithAnimation(IVirtualDesktop22621 desktop);
     void GetLastActiveDesktop(out IVirtualDesktop22621 desktop);
     void WaitForAnimationToComplete();
+}
+
+[ComImport]
+[Guid("B92B56A9-8B55-4E14-9A89-0199BBB6F93B")]
+[InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+internal interface IDesktopWallpaper
+{
+    void SetWallpaper([MarshalAs(UnmanagedType.LPWStr)] string monitorID, [MarshalAs(UnmanagedType.LPWStr)] string wallpaper);
+    void GetWallpaper([MarshalAs(UnmanagedType.LPWStr)] string monitorID, [MarshalAs(UnmanagedType.LPWStr)] out string wallpaper);
+    void GetMonitorDevicePathAt(uint monitorIndex, [MarshalAs(UnmanagedType.LPWStr)] out string monitorID);
+    void GetMonitorDevicePathCount(out uint count);
+    void GetMonitorRECT([MarshalAs(UnmanagedType.LPWStr)] string monitorID, out tagRECT displayRect);
+    void SetBackgroundColor(uint color);
+    void GetBackgroundColor(out uint color);
+    void SetPosition(int position);
+    void GetPosition(out int position);
+    void SetSlideshow(IntPtr items);
+    void GetSlideshow(out IntPtr items);
+    void SetSlideshowOptions(uint options, uint slideshowTick);
+    void GetSlideshowOptions(out uint options, out uint slideshowTick);
+    void AdvanceSlideshow([MarshalAs(UnmanagedType.LPWStr)] string monitorID, int direction);
+    void GetStatus(out int state);
+    void Enable(bool enable);
+}
+
+[StructLayout(LayoutKind.Sequential)]
+internal struct tagRECT
+{
+    public int left;
+    public int top;
+    public int right;
+    public int bottom;
 }

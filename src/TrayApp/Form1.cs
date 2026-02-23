@@ -49,7 +49,7 @@ public partial class Form1 : Form
             try
             {
                 _vd = new VirtualDesktopService();
-                Logger.Info("VirtualDesktopService initialized");
+                Logger.Info($"VirtualDesktopService initialized (Windows build {_vd.WindowsBuild})");
             }
             catch (Exception ex)
             {
@@ -103,6 +103,15 @@ public partial class Form1 : Form
         var setFolder = new ToolStripMenuItem("Set wallpaper folder...", null, (_, _) => SetWallpaperFolder());
         var setInterval = new ToolStripMenuItem("Set interval (seconds)...", null, (_, _) => SetIntervalSeconds());
 
+        var useGlobalMode = new ToolStripMenuItem("Use global wallpaper (compatibility)") { CheckOnClick = true };
+        useGlobalMode.Checked = _config.WallpaperMode == WallpaperMode.Global;
+        useGlobalMode.Click += (_, _) =>
+        {
+            _config.WallpaperMode = useGlobalMode.Checked ? WallpaperMode.Global : WallpaperMode.PerVirtualDesktop;
+            JsonStore.Save(AppPaths.ConfigPath, _config);
+            Logger.Info($"Wallpaper mode changed to: {_config.WallpaperMode}");
+        };
+
         _startupItem = new ToolStripMenuItem("Launch at startup") { CheckOnClick = true };
         _startupItem.Checked = IsStartupEnabled();
         _startupItem.Click += (_, _) => ToggleStartup(_startupItem.Checked);
@@ -118,6 +127,7 @@ public partial class Form1 : Form
             new ToolStripSeparator(),
             setFolder,
             setInterval,
+            useGlobalMode,
             new ToolStripSeparator(),
             _startupItem,
             openLog,
@@ -184,17 +194,39 @@ public partial class Form1 : Form
     {
         try
         {
-            Logger.Info("RotateOnce called");
+            Logger.Info($"RotateOnce called (mode={_config.WallpaperMode})");
 
-            if (_vd == null || _library == null || _engine == null)
+            if (_library == null || _engine == null)
             {
-                Logger.Info($"RotateOnce skipped: vd={_vd != null}, library={_library != null}, engine={_engine != null}");
+                Logger.Info($"RotateOnce skipped: library={_library != null}, engine={_engine != null}");
                 return;
             }
 
             if (_library.Wallpapers.Count == 0)
             {
                 _tray?.ShowBalloonTip(3000, "No wallpapers found", "Pick a folder with images first.", ToolTipIcon.Warning);
+                return;
+            }
+
+            // Global mode: single wallpaper for all desktops/monitors using official API
+            if (_config.WallpaperMode == WallpaperMode.Global)
+            {
+                var next = _engine.NextForDesktop(Guid.Empty); // Use a fixed GUID for global mode
+                if (next != null)
+                {
+                    Logger.Info($"Setting global wallpaper: {next}");
+                    VirtualDesktopService.SetWallpaperGlobal(next);
+                    Logger.Info("Global wallpaper set successfully");
+                }
+                JsonStore.Save(AppPaths.StatePath, _state);
+                Logger.Info("RotateOnce completed successfully (global mode)");
+                return;
+            }
+
+            // Per-virtual-desktop mode
+            if (_vd == null)
+            {
+                Logger.Info("RotateOnce skipped: VirtualDesktopService not available");
                 return;
             }
 
@@ -210,8 +242,19 @@ public partial class Form1 : Form
                     continue;
                 }
 
-                Logger.Info($"Setting wallpaper for desktop {d.Index}: {next}");
-                _vd.SetWallpaper(d.Index, next);
+                Logger.Info($"Setting wallpaper for desktop {d.Index} (id={d.Id}): {next}");
+                Logger.Info($"  Current wallpaper before: {d.WallpaperPath}");
+                
+                try
+                {
+                    _vd.SetWallpaper(d.Index, next);
+                    Logger.Info($"  SetWallpaper call succeeded");
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error(ex, $"  SetWallpaper failed for desktop {d.Index}");
+                    throw;
+                }
             }
 
             JsonStore.Save(AppPaths.StatePath, _state);
