@@ -1,5 +1,5 @@
 # What's New
-v1.3.1 - Global mode now sets different wallpapers per physical monitor
+v1.3.2 - Fixed multi-monitor bug where some monitors got the same wallpaper
 
 # Vd Wallpaper Rotator
 

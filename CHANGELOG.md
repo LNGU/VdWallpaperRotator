@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.2] - 2026-02-23
+
+### Fixed
+- Fixed bug where multiple monitors would get the same wallpaper in global mode
+- Each monitor now correctly gets a unique wallpaper (random or consecutive in sequential mode)
+
 ## [1.3.1] - 2026-02-23
 
 ### Changed

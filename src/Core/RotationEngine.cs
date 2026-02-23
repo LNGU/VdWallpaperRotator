@@ -35,4 +35,56 @@ public sealed class RotationEngine
         _state.DesktopIndices[desktopId] = next;
         return list[next];
     }
+
+    /// <summary>
+    /// Gets multiple unique wallpapers for multi-monitor setups.
+    /// Each monitor gets a different wallpaper.
+    /// </summary>
+    public IReadOnlyList<string> NextForMonitors(int monitorCount)
+    {
+        var list = _library.Wallpapers;
+        if (list.Count == 0)
+            return Array.Empty<string>();
+
+        var result = new List<string>(monitorCount);
+
+        if (_config.Mode == RotationMode.Random)
+        {
+            // Pick random unique indices (or allow repeats if fewer wallpapers than monitors)
+            var usedIndices = new HashSet<int>();
+            for (int i = 0; i < monitorCount; i++)
+            {
+                int idx;
+                if (usedIndices.Count < list.Count)
+                {
+                    // We can still pick unique wallpapers
+                    do { idx = _rng.Next(list.Count); }
+                    while (usedIndices.Contains(idx));
+                    usedIndices.Add(idx);
+                }
+                else
+                {
+                    // More monitors than wallpapers, allow repeats
+                    idx = _rng.Next(list.Count);
+                }
+                result.Add(list[idx]);
+            }
+        }
+        else
+        {
+            // Sequential: get consecutive wallpapers starting from saved position
+            _state.DesktopIndices.TryGetValue(Guid.Empty, out var startIndex);
+            
+            for (int i = 0; i < monitorCount; i++)
+            {
+                var idx = (startIndex + i) % list.Count;
+                result.Add(list[idx]);
+            }
+            
+            // Save the next starting position
+            _state.DesktopIndices[Guid.Empty] = (startIndex + monitorCount) % list.Count;
+        }
+
+        return result;
+    }
 }

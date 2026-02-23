@@ -212,19 +212,13 @@ public partial class Form1 : Form
             if (_config.WallpaperMode == WallpaperMode.Global)
             {
                 var monitorCount = VirtualDesktopService.GetMonitorCount();
-                Logger.Info($"Global mode: {monitorCount} monitor(s) detected");
+                Logger.Info($"Global mode: {monitorCount} monitor(s) detected, rotation={_config.Mode}");
 
-                var wallpapers = new List<string>();
-                for (int i = 0; i < monitorCount; i++)
+                var wallpapers = _engine.NextForMonitors(monitorCount);
+                
+                for (int i = 0; i < wallpapers.Count; i++)
                 {
-                    // Use a unique GUID per monitor slot to track position in sequence
-                    var monitorGuid = new Guid(i, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-                    var next = _engine.NextForDesktop(monitorGuid);
-                    if (next != null)
-                    {
-                        wallpapers.Add(next);
-                        Logger.Info($"  Monitor {i}: {next}");
-                    }
+                    Logger.Info($"  Monitor {i}: {wallpapers[i]}");
                 }
 
                 if (wallpapers.Count > 0)
