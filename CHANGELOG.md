@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0] - 2026-02-23
+
+### Fixed
+- Rotation not working on fresh install due to hardcoded wallpaper folder path
+- App now prompts user to select wallpaper folder on first run
+
+### Added
+- Detailed logging in rotation process for easier troubleshooting
+
 ## [1.1.0] - 2026-02-18
 
 ### Added

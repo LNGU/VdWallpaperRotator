@@ -67,6 +67,22 @@ public partial class Form1 : Form
             // Start immediately (can be changed later)
             StartRotation();
             Logger.Info("OnLoad complete, rotation started");
+
+            // On first run, prompt user to set a wallpaper folder
+            if (string.IsNullOrWhiteSpace(_config.WallpaperRoot) || !Directory.Exists(_config.WallpaperRoot))
+            {
+                Logger.Info("No valid wallpaper folder configured, prompting user");
+                BeginInvoke(() =>
+                {
+                    var result = MessageBox.Show(
+                        "No wallpaper folder is configured.\n\nWould you like to select a folder now?",
+                        "Wallpaper Rotator Setup",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Information);
+                    if (result == DialogResult.Yes)
+                        SetWallpaperFolder();
+                });
+            }
         }
         catch (Exception ex)
         {
@@ -168,8 +184,13 @@ public partial class Form1 : Form
     {
         try
         {
+            Logger.Info("RotateOnce called");
+
             if (_vd == null || _library == null || _engine == null)
+            {
+                Logger.Info($"RotateOnce skipped: vd={_vd != null}, library={_library != null}, engine={_engine != null}");
                 return;
+            }
 
             if (_library.Wallpapers.Count == 0)
             {
@@ -178,16 +199,23 @@ public partial class Form1 : Form
             }
 
             var desktops = _vd.GetDesktops();
+            Logger.Info($"Found {desktops.Count} virtual desktops");
+
             foreach (var d in desktops)
             {
                 var next = _engine.NextForDesktop(d.Id);
                 if (next == null)
+                {
+                    Logger.Info($"No wallpaper for desktop {d.Index}");
                     continue;
+                }
 
+                Logger.Info($"Setting wallpaper for desktop {d.Index}: {next}");
                 _vd.SetWallpaper(d.Index, next);
             }
 
             JsonStore.Save(AppPaths.StatePath, _state);
+            Logger.Info("RotateOnce completed successfully");
         }
         catch (Exception ex)
         {

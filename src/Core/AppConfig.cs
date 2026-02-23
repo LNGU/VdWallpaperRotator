@@ -10,7 +10,7 @@ public enum RotationMode
 
 public sealed class AppConfig
 {
-    public string WallpaperRoot { get; set; } = @"C:\\Users\\lngu1\\OneDrive\\wallpapers";
+    public string WallpaperRoot { get; set; } = "";
 
     public int IntervalSeconds { get; set; } = 60;
 
