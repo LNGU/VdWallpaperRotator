@@ -208,16 +208,31 @@ public partial class Form1 : Form
                 return;
             }
 
-            // Global mode: single wallpaper for all desktops/monitors using official API
+            // Global mode: different wallpaper per physical monitor using official API
             if (_config.WallpaperMode == WallpaperMode.Global)
             {
-                var next = _engine.NextForDesktop(Guid.Empty); // Use a fixed GUID for global mode
-                if (next != null)
+                var monitorCount = VirtualDesktopService.GetMonitorCount();
+                Logger.Info($"Global mode: {monitorCount} monitor(s) detected");
+
+                var wallpapers = new List<string>();
+                for (int i = 0; i < monitorCount; i++)
                 {
-                    Logger.Info($"Setting global wallpaper: {next}");
-                    VirtualDesktopService.SetWallpaperGlobal(next);
-                    Logger.Info("Global wallpaper set successfully");
+                    // Use a unique GUID per monitor slot to track position in sequence
+                    var monitorGuid = new Guid(i, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+                    var next = _engine.NextForDesktop(monitorGuid);
+                    if (next != null)
+                    {
+                        wallpapers.Add(next);
+                        Logger.Info($"  Monitor {i}: {next}");
+                    }
                 }
+
+                if (wallpapers.Count > 0)
+                {
+                    VirtualDesktopService.SetWallpaperGlobal(wallpapers);
+                    Logger.Info("Global wallpapers set successfully");
+                }
+
                 JsonStore.Save(AppPaths.StatePath, _state);
                 Logger.Info("RotateOnce completed successfully (global mode)");
                 return;

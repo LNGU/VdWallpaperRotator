@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.1] - 2026-02-23
+
+### Changed
+- Global mode now sets **different wallpapers per physical monitor** instead of the same image on all monitors
+
 ## [1.3.0] - 2026-02-23
 
 ### Added

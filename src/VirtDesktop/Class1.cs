@@ -109,27 +109,48 @@ public sealed class VirtualDesktopService
     }
 
     /// <summary>
-    /// Sets wallpaper for the current desktop using the official IDesktopWallpaper API.
-    /// This affects all monitors on the current virtual desktop.
+    /// Sets wallpaper for each monitor using the official IDesktopWallpaper API.
+    /// Pass one path per monitor. If fewer paths than monitors, paths cycle.
     /// </summary>
-    public static void SetWallpaperGlobal(string path)
+    public static void SetWallpaperGlobal(IReadOnlyList<string> paths)
     {
-        if (string.IsNullOrWhiteSpace(path))
-            throw new ArgumentNullException(nameof(path));
+        if (paths == null || paths.Count == 0)
+            throw new ArgumentException("At least one wallpaper path is required", nameof(paths));
 
-        if (!File.Exists(path))
-            throw new FileNotFoundException($"Wallpaper file not found: {path}", path);
+        foreach (var path in paths)
+        {
+            if (!File.Exists(path))
+                throw new FileNotFoundException($"Wallpaper file not found: {path}", path);
+        }
 
         var wallpaper = (IDesktopWallpaper)Activator.CreateInstance(Type.GetTypeFromCLSID(Guids.CLSID_DesktopWallpaper)!)!;
         try
         {
-            // Set wallpaper on all monitors
+            // Set different wallpaper on each monitor
             wallpaper.GetMonitorDevicePathCount(out var count);
             for (uint i = 0; i < count; i++)
             {
                 wallpaper.GetMonitorDevicePathAt(i, out var monitorId);
-                wallpaper.SetWallpaper(monitorId, path);
+                var pathIndex = (int)(i % paths.Count);
+                wallpaper.SetWallpaper(monitorId, paths[pathIndex]);
             }
+        }
+        finally
+        {
+            Marshal.ReleaseComObject(wallpaper);
+        }
+    }
+
+    /// <summary>
+    /// Gets the number of physical monitors.
+    /// </summary>
+    public static int GetMonitorCount()
+    {
+        var wallpaper = (IDesktopWallpaper)Activator.CreateInstance(Type.GetTypeFromCLSID(Guids.CLSID_DesktopWallpaper)!)!;
+        try
+        {
+            wallpaper.GetMonitorDevicePathCount(out var count);
+            return (int)count;
         }
         finally
         {
