@@ -208,23 +208,76 @@ public partial class Form1 : Form
                 return;
             }
 
-            // Global mode: different wallpaper per physical monitor using official API
+            // Global mode: different wallpaper per physical monitor AND per virtual desktop
             if (_config.WallpaperMode == WallpaperMode.Global)
             {
                 var monitorCount = VirtualDesktopService.GetMonitorCount();
-                Logger.Info($"Global mode: {monitorCount} monitor(s) detected, rotation={_config.Mode}");
-
-                var wallpapers = _engine.NextForMonitors(monitorCount);
                 
-                for (int i = 0; i < wallpapers.Count; i++)
+                // Get virtual desktops (if available)
+                var desktopCount = 1;
+                var currentDesktop = 0;
+                IReadOnlyList<VirtualDesktopInfo>? desktops = null;
+                
+                if (_vd != null)
                 {
-                    Logger.Info($"  Monitor {i}: {wallpapers[i]}");
+                    try
+                    {
+                        desktops = _vd.GetDesktops();
+                        desktopCount = desktops.Count;
+                        currentDesktop = _vd.GetCurrentDesktopIndex();
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Info($"Could not get virtual desktops: {ex.Message}");
+                    }
                 }
 
-                if (wallpapers.Count > 0)
+                var totalSlots = monitorCount * desktopCount;
+                Logger.Info($"Global mode: {monitorCount} monitor(s), {desktopCount} VD(s) = {totalSlots} total slots, rotation={_config.Mode}");
+
+                // Get unique wallpapers for all slots
+                var allWallpapers = _engine.NextUniqueWallpapers(totalSlots);
+                
+                // Set wallpapers for each virtual desktop using undocumented API
+                if (desktops != null && _vd != null)
                 {
-                    VirtualDesktopService.SetWallpaperGlobal(wallpapers);
-                    Logger.Info("Global wallpapers set successfully");
+                    for (int vdIndex = 0; vdIndex < desktopCount; vdIndex++)
+                    {
+                        // Get wallpapers for this VD's monitors
+                        var vdWallpapers = new List<string>();
+                        for (int m = 0; m < monitorCount; m++)
+                        {
+                            var slotIndex = vdIndex * monitorCount + m;
+                            vdWallpapers.Add(allWallpapers[slotIndex]);
+                        }
+
+                        // Use undocumented API to set per-VD wallpaper (uses first monitor's wallpaper)
+                        // This sets the VD's "default" wallpaper
+                        try
+                        {
+                            _vd.SetWallpaper(vdIndex, vdWallpapers[0]);
+                            Logger.Info($"  VD {vdIndex}: Set via undocumented API: {vdWallpapers[0]}");
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.Info($"  VD {vdIndex}: Undocumented API failed: {ex.Message}");
+                        }
+                    }
+                }
+
+                // Use official API to set wallpapers for current VD (forces visual refresh)
+                var currentVdWallpapers = new List<string>();
+                for (int m = 0; m < monitorCount; m++)
+                {
+                    var slotIndex = currentDesktop * monitorCount + m;
+                    currentVdWallpapers.Add(allWallpapers[slotIndex]);
+                    Logger.Info($"  Current VD, Monitor {m}: {allWallpapers[slotIndex]}");
+                }
+
+                if (currentVdWallpapers.Count > 0)
+                {
+                    VirtualDesktopService.SetWallpaperGlobal(currentVdWallpapers);
+                    Logger.Info("Current VD wallpapers set via official API (visual refresh)");
                 }
 
                 JsonStore.Save(AppPaths.StatePath, _state);
@@ -232,17 +285,17 @@ public partial class Form1 : Form
                 return;
             }
 
-            // Per-virtual-desktop mode
+            // Per-virtual-desktop mode (undocumented API only, may not work on all builds)
             if (_vd == null)
             {
                 Logger.Info("RotateOnce skipped: VirtualDesktopService not available");
                 return;
             }
 
-            var desktops = _vd.GetDesktops();
-            Logger.Info($"Found {desktops.Count} virtual desktops");
+            var vds = _vd.GetDesktops();
+            Logger.Info($"Found {vds.Count} virtual desktops");
 
-            foreach (var d in desktops)
+            foreach (var d in vds)
             {
                 var next = _engine.NextForDesktop(d.Id);
                 if (next == null)

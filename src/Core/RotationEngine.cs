@@ -42,17 +42,25 @@ public sealed class RotationEngine
     /// </summary>
     public IReadOnlyList<string> NextForMonitors(int monitorCount)
     {
+        return NextUniqueWallpapers(monitorCount);
+    }
+
+    /// <summary>
+    /// Gets a specific number of unique wallpapers for any use case.
+    /// </summary>
+    public IReadOnlyList<string> NextUniqueWallpapers(int count)
+    {
         var list = _library.Wallpapers;
         if (list.Count == 0)
             return Array.Empty<string>();
 
-        var result = new List<string>(monitorCount);
+        var result = new List<string>(count);
 
         if (_config.Mode == RotationMode.Random)
         {
-            // Pick random unique indices (or allow repeats if fewer wallpapers than monitors)
+            // Pick random unique indices (or allow repeats if fewer wallpapers than needed)
             var usedIndices = new HashSet<int>();
-            for (int i = 0; i < monitorCount; i++)
+            for (int i = 0; i < count; i++)
             {
                 int idx;
                 if (usedIndices.Count < list.Count)
@@ -64,7 +72,7 @@ public sealed class RotationEngine
                 }
                 else
                 {
-                    // More monitors than wallpapers, allow repeats
+                    // More slots than wallpapers, allow repeats
                     idx = _rng.Next(list.Count);
                 }
                 result.Add(list[idx]);
@@ -75,14 +83,14 @@ public sealed class RotationEngine
             // Sequential: get consecutive wallpapers starting from saved position
             _state.DesktopIndices.TryGetValue(Guid.Empty, out var startIndex);
             
-            for (int i = 0; i < monitorCount; i++)
+            for (int i = 0; i < count; i++)
             {
                 var idx = (startIndex + i) % list.Count;
                 result.Add(list[idx]);
             }
             
             // Save the next starting position
-            _state.DesktopIndices[Guid.Empty] = (startIndex + monitorCount) % list.Count;
+            _state.DesktopIndices[Guid.Empty] = (startIndex + count) % list.Count;
         }
 
         return result;

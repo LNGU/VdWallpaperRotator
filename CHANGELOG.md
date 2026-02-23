@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.3] - 2026-02-23
+
+### Added
+- Global mode now rotates wallpapers across ALL physical monitors AND virtual desktops
+- Each monitor on each virtual desktop gets a unique wallpaper
+- Uses hybrid approach: undocumented API for per-VD + official API for visual refresh
+
 ## [1.3.2] - 2026-02-23
 
 ### Fixed

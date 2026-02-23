@@ -157,6 +157,34 @@ public sealed class VirtualDesktopService
             Marshal.ReleaseComObject(wallpaper);
         }
     }
+
+    /// <summary>
+    /// Gets the index of the currently active virtual desktop.
+    /// </summary>
+    public int GetCurrentDesktopIndex()
+    {
+        IVirtualDesktop22621 current;
+        if (_internal26100 != null)
+            current = _internal26100.GetCurrentDesktop();
+        else
+            current = _internal22621!.GetCurrentDesktop();
+
+        try
+        {
+            var currentId = current.GetId();
+            var desktops = GetDesktops();
+            for (int i = 0; i < desktops.Count; i++)
+            {
+                if (desktops[i].Id == currentId)
+                    return i;
+            }
+            return 0;
+        }
+        finally
+        {
+            Marshal.ReleaseComObject(current);
+        }
+    }
 }
 
 internal static class Guids

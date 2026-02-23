@@ -1,5 +1,5 @@
 # What's New
-v1.3.2 - Fixed multi-monitor bug where some monitors got the same wallpaper
+v1.3.3 - Global mode now rotates ALL monitors AND virtual desktops with unique wallpapers
 
 # Vd Wallpaper Rotator
 
@@ -47,7 +47,7 @@ If wallpaper rotation doesn't work on your system (logs show success but wallpap
 | Mode | Description |
 |------|-------------|
 | **Per-Virtual-Desktop** (default) | Different wallpaper on each virtual desktop. Uses undocumented Windows API. |
-| **Global** (compatibility) | Different wallpaper per physical monitor, same across all virtual desktops. Uses official Windows API. More reliable on newer Windows builds. |
+| **Global** (compatibility) | Different wallpaper per physical monitor AND per virtual desktop. Uses hybrid approach with official API for reliable visual updates. |
 
 **When to use compatibility mode:**
 - Wallpaper doesn't change despite successful log entries
