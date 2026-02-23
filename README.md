@@ -1,5 +1,5 @@
 # What's New
-v.1.1.0 - left-click enables 'rotate now'
+v1.2.0 - Fix rotation not working on fresh install; prompts for wallpaper folder on first run
 
 # Vd Wallpaper Rotator
 
@@ -7,7 +7,7 @@ WinForms tray app that rotates **per-virtual-desktop** wallpapers on **Windows 1
 
 ## Install
 
-Download and run `VdWallpaperRotator-Setup-1.0.0.exe` from the [Releases](../../releases) page.
+Download and run the latest `VdWallpaperRotator-Setup-x.x.x.exe` from the [Releases](../../releases) page.
 
 The installer will:
 - Install to `%LocalAppData%\Programs\VdWallpaperRotator`
@@ -31,14 +31,14 @@ dotnet publish .\src\TrayApp\TrayApp.csproj -c Release -r win-x64 --self-contain
 iscc installer.iss
 ```
 
-Output: `installer\VdWallpaperRotator-Setup-1.0.0.exe`
+Output: `installer\VdWallpaperRotator-Setup-x.x.x.exe`
 
 ## Use
 - Right-click the tray icon to:
   - set the wallpaper folder (subfolders are scanned)
   - set the rotation interval (seconds)
   - enable/disable launch at startup
-- Double-click the tray icon to rotate immediately.
+- Left-click the tray icon to rotate immediately.
 
 ## Config files
 Stored under:
